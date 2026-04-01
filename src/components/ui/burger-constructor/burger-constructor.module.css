@@ -8,11 +8,15 @@
 
 .elements {
   min-height: 100px;
-
-  overflow-y: scroll;
+  max-height: 46.4vh;
+  overflow-y: auto;
   list-style-type: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  row-gap: 16px;
 }
 
 .total {

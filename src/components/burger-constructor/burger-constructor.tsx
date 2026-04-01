@@ -1,4 +1,4 @@
-import { FC, useMemo } from 'react';
+import { FC, useMemo, useEffect } from 'react';
 import { TConstructorIngredient, TOrder, TIngredient } from '@utils-types';
 import { BurgerConstructorUI } from '@ui';
 import { useDispatch, useSelector } from '../../services/store';
@@ -16,7 +16,9 @@ import {
   postNewOrderThunk,
   newOrderSelector,
   orderRequestSelector,
-  clearOrder
+  clearOrder,
+  clearError,
+  orderErrorSelector
 } from '../../services/slices/orderSlice';
 
 export const BurgerConstructor: FC = () => {
@@ -25,6 +27,7 @@ export const BurgerConstructor: FC = () => {
   const navigate = useNavigate();
 
   const user = useSelector(userSelector);
+  const error = useSelector(orderErrorSelector);
 
   const constructorItems = useSelector(burgerConstructorSelector) ?? {
     bun: null,
@@ -58,9 +61,15 @@ export const BurgerConstructor: FC = () => {
     dispatch(postNewOrderThunk(ingredientsIds));
   };
 
+  useEffect(() => {
+    if (newOrder.order) {
+      dispatch(clearBurger());
+    }
+  }, [newOrder.order, dispatch]);
+
   const closeOrderModal = () => {
-    dispatch(clearBurger());
     dispatch(clearOrder());
+    dispatch(clearError());
   };
 
   const price = useMemo(
@@ -82,6 +91,7 @@ export const BurgerConstructor: FC = () => {
         orderModalData={newOrder.order as TOrder | null}
         onOrderClick={onOrderClick}
         closeOrderModal={closeOrderModal}
+        error={error}
       />
     </div>
   );

@@ -3,7 +3,9 @@ import { FC, SyntheticEvent, useEffect, useState } from 'react';
 import {
   updateUserThunk,
   userLoadingSelector,
-  userSelector
+  userSelector,
+  errorSelector,
+  clearError
 } from '../../services/slices/userSlice';
 import { useDispatch, useSelector } from '../../services/store';
 import { Preloader } from '@ui';
@@ -12,6 +14,7 @@ export const Profile: FC = () => {
   const dispatch = useDispatch();
   const user = useSelector(userSelector);
   const isLoading = useSelector(userLoadingSelector);
+  const error = useSelector(errorSelector);
 
   const [formValue, setFormValue] = useState({
     name: user?.name || '',
@@ -47,11 +50,14 @@ export const Profile: FC = () => {
 
   const handleCancel = (e: SyntheticEvent) => {
     e.preventDefault();
+
     setFormValue({
       name: user.name,
       email: user.email,
       password: ''
     });
+
+    dispatch(clearError());
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,6 +65,10 @@ export const Profile: FC = () => {
       ...prevState,
       [e.target.name]: e.target.value
     }));
+
+    if (error) {
+      dispatch(clearError());
+    }
   };
 
   return (
@@ -68,6 +78,7 @@ export const Profile: FC = () => {
       handleCancel={handleCancel}
       handleSubmit={handleSubmit}
       handleInputChange={handleInputChange}
+      updateUserError={error || ''}
     />
   );
 };

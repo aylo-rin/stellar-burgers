@@ -11,25 +11,61 @@ import {
 } from '@api';
 import { setCookie, getCookie } from '../../utils/cookie';
 
-export const registerUserThunk = createAsyncThunk(
-  'user/register',
-  async (data: TRegisterData) => await registerUserApi(data)
-);
+type RejectError = string;
 
-export const loginUserThunk = createAsyncThunk(
-  'user/login',
-  async (data: TLoginData) => await loginUserApi(data)
-);
+export const registerUserThunk = createAsyncThunk<
+  any,
+  TRegisterData,
+  { rejectValue: RejectError }
+>('user/register', async (data, { rejectWithValue }) => {
+  try {
+    return await registerUserApi(data);
+  } catch (err: any) {
+    const message = err.response?.data?.message || 'Ошибка регистрации';
 
-export const updateUserThunk = createAsyncThunk(
-  'user/update',
-  async (data: Partial<TRegisterData>) => await updateUserApi(data)
-);
+    return rejectWithValue(message);
+  }
+});
 
-export const logoutUserThunk = createAsyncThunk(
-  'user/logout',
-  async () => await logoutApi()
-);
+export const loginUserThunk = createAsyncThunk<
+  any,
+  TLoginData,
+  { rejectValue: RejectError }
+>('user/login', async (data, { rejectWithValue }) => {
+  try {
+    return await loginUserApi(data);
+  } catch (err: any) {
+    const message = err.response?.data?.message || 'Ошибка входа';
+
+    return rejectWithValue(message);
+  }
+});
+
+export const updateUserThunk = createAsyncThunk<
+  any,
+  Partial<TRegisterData>,
+  { rejectValue: RejectError }
+>('user/update', async (data, { rejectWithValue }) => {
+  try {
+    return await updateUserApi(data);
+  } catch (err: any) {
+    const message = err.response?.data?.message || 'Ошибка обновления данных';
+
+    return rejectWithValue(message);
+  }
+});
+
+export const logoutUserThunk = createAsyncThunk<
+  void,
+  void,
+  { rejectValue: RejectError }
+>('user/logout', async (_, { rejectWithValue }) => {
+  try {
+    await logoutApi();
+  } catch (err: any) {
+    return rejectWithValue('Ошибка выхода');
+  }
+});
 
 export const setIsAuthChecked = createAction<boolean>('user/setIsAuthChecked');
 
@@ -41,7 +77,7 @@ export const checkUserAuth = createAsyncThunk(
         const res = await getUserApi();
         dispatch(setUser(res.user));
       }
-    } catch (e) {
+    } catch {
       localStorage.removeItem('refreshToken');
     } finally {
       dispatch(setIsAuthChecked(true));
@@ -70,7 +106,7 @@ const setPending = (state: UserState) => {
 
 const setRejected = (state: UserState, action: any) => {
   state.loading = false;
-  state.error = 'Ошибка загрузки';
+  state.error = action.payload || 'Что-то пошло не так';
 };
 
 export const userSlice = createSlice({
@@ -79,8 +115,12 @@ export const userSlice = createSlice({
   reducers: {
     setUser: (state, { payload }) => {
       state.user = payload;
+    },
+    clearError: (state) => {
+      state.error = null;
     }
   },
+
   extraReducers: (builder) => {
     builder
       .addCase(setIsAuthChecked, (state, { payload }) => {
@@ -88,8 +128,6 @@ export const userSlice = createSlice({
       })
 
       .addCase(registerUserThunk.pending, setPending)
-      .addCase(loginUserThunk.pending, setPending)
-
       .addCase(registerUserThunk.fulfilled, (state, { payload }) => {
         state.loading = false;
         state.user = payload.user;
@@ -97,6 +135,9 @@ export const userSlice = createSlice({
         localStorage.setItem('refreshToken', payload.refreshToken);
         state.isAuthChecked = true;
       })
+      .addCase(registerUserThunk.rejected, setRejected)
+
+      .addCase(loginUserThunk.pending, setPending)
       .addCase(loginUserThunk.fulfilled, (state, { payload }) => {
         state.loading = false;
         state.user = payload.user;
@@ -104,8 +145,6 @@ export const userSlice = createSlice({
         localStorage.setItem('refreshToken', payload.refreshToken);
         state.isAuthChecked = true;
       })
-
-      .addCase(registerUserThunk.rejected, setRejected)
       .addCase(loginUserThunk.rejected, setRejected)
 
       .addCase(updateUserThunk.pending, setPending)
@@ -125,15 +164,22 @@ export const userSlice = createSlice({
       })
       .addCase(logoutUserThunk.rejected, setRejected);
   },
+
   selectors: {
     userSelector: (s) => s.user,
     isAuthCheckedSelector: (s) => s.isAuthChecked,
-    userLoadingSelector: (s) => s.loading
+    userLoadingSelector: (s) => s.loading,
+    errorSelector: (s) => s.error
   }
 });
 
-export const { setUser } = userSlice.actions;
-export const { userSelector, isAuthCheckedSelector, userLoadingSelector } =
-  userSlice.selectors;
+export const { setUser, clearError } = userSlice.actions;
+
+export const {
+  userSelector,
+  isAuthCheckedSelector,
+  userLoadingSelector,
+  errorSelector
+} = userSlice.selectors;
 
 export const userSliceReducer = userSlice.reducer;
