@@ -1,16 +1,24 @@
 import { ProfileUI } from '@ui-pages';
 import { FC, SyntheticEvent, useEffect, useState } from 'react';
+import {
+  updateUserThunk,
+  userLoadingSelector,
+  userSelector,
+  errorSelector,
+  clearError
+} from '../../services/slices/userSlice';
+import { useDispatch, useSelector } from '../../services/store';
+import { Preloader } from '@ui';
 
 export const Profile: FC = () => {
-  /** TODO: взять переменную из стора */
-  const user = {
-    name: '',
-    email: ''
-  };
+  const dispatch = useDispatch();
+  const user = useSelector(userSelector);
+  const isLoading = useSelector(userLoadingSelector);
+  const error = useSelector(errorSelector);
 
   const [formValue, setFormValue] = useState({
-    name: user.name,
-    email: user.email,
+    name: user?.name || '',
+    email: user?.email || '',
     password: ''
   });
 
@@ -22,6 +30,14 @@ export const Profile: FC = () => {
     }));
   }, [user]);
 
+  if (!user) {
+    return null;
+  }
+
+  if (isLoading) {
+    return <Preloader />;
+  }
+
   const isFormChanged =
     formValue.name !== user?.name ||
     formValue.email !== user?.email ||
@@ -29,15 +45,19 @@ export const Profile: FC = () => {
 
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
+    dispatch(updateUserThunk(formValue));
   };
 
   const handleCancel = (e: SyntheticEvent) => {
     e.preventDefault();
+
     setFormValue({
       name: user.name,
       email: user.email,
       password: ''
     });
+
+    dispatch(clearError());
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,6 +65,10 @@ export const Profile: FC = () => {
       ...prevState,
       [e.target.name]: e.target.value
     }));
+
+    if (error) {
+      dispatch(clearError());
+    }
   };
 
   return (
@@ -54,8 +78,7 @@ export const Profile: FC = () => {
       handleCancel={handleCancel}
       handleSubmit={handleSubmit}
       handleInputChange={handleInputChange}
+      updateUserError={error || ''}
     />
   );
-
-  return null;
 };
